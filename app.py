@@ -60,4 +60,15 @@ def calculate_midland_temp_distribution():
 
     return pd.DataFrame(table_data)
 
+# v1.4
+# Append this directly to the bottom of your app.py file
+
+# Streamlit App UI
+st.set_page_config(page_title="Midland Temp APM", layout="centered")
+st.title("Midland, TX Temperature APM")
+
+with st.spinner("Fetching and calculating historical data..."):
+    df = calculate_midland_temp_distribution()
+    st.table(df)
+
 # Commit changes
