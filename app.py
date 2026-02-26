@@ -23,11 +23,8 @@ def get_coordinates(city, state):
                 return result["latitude"], result["longitude"]
     return None, None
 
-# v1.11 - Snippet 1
-# Replace your entire `calculate_temp_distribution` function with this updated version
-
 @st.cache_data
-def calculate_temp_distribution(lat, lon, target_temp):
+def calculate_temp_distribution(lat, lon):
     url = f"https://archive-api.open-meteo.com/v1/archive?latitude={lat}&longitude={lon}&start_date=2019-01-01&end_date=2024-01-01&hourly=temperature_2m"
     response = requests.get(url)
     response.raise_for_status()
@@ -64,8 +61,15 @@ def calculate_temp_distribution(lat, lon, target_temp):
         elif 42 <= temp <= 44: bins["42-44°C"] += 1
         elif temp > 45: bins["> 45°C"] += 1
 
+    # 114kW stays below 34°C inlet up to the 20-22°C ambient bin (inlet hits 33.5°C)
+    keys_114 = ["< 10°C", "10-16°C", "16-18°C", "18-20°C", "20-22°C"]
+    pct_114_below_34 = sum(bins[k] for k in keys_114) / total_records * 100 if total_records else 0
+
+    # 95kW stays below 34°C inlet up to the 22-24°C ambient bin (inlet hits 33.3°C)
+    keys_95 = ["< 10°C", "10-16°C", "16-18°C", "18-20°C", "20-22°C", "22-24°C"]
+    pct_95_below_34 = sum(bins[k] for k in keys_95) / total_records * 100 if total_records else 0
+
     data_114kw = {
-        "< 10°C": (28.4, 42.3), # Mapped to lowest known bin for baseline
         "10-16°C": (28.4, 42.3), "16-18°C": (30.1, 44.0), "18-20°C": (31.8, 45.7),
         "20-22°C": (33.5, 47.4), "22-24°C": (35.2, 49.1), "24-26°C": (36.9, 50.8),
         "26-28°C": (38.6, 52.5), "28-30°C": (40.3, 54.2), "30-32°C": (42.0, 55.9),
@@ -75,7 +79,6 @@ def calculate_temp_distribution(lat, lon, target_temp):
     }
 
     data_95kw = {
-        "< 10°C": (26.5, 38.1), # Mapped to lowest known bin for baseline
         "10-16°C": (26.5, 38.1), "16-18°C": (28.2, 39.8), "18-20°C": (29.9, 41.5),
         "20-22°C": (31.6, 43.2), "22-24°C": (33.3, 44.9), "24-26°C": (35.0, 46.6),
         "26-28°C": (36.7, 48.3), "28-30°C": (38.4, 50.0), "30-32°C": (40.1, 51.7),
@@ -86,8 +89,6 @@ def calculate_temp_distribution(lat, lon, target_temp):
 
     table_data = []
     cumulative_pct = 0.0
-    pct_114_below_target = 0.0
-    pct_95_below_target = 0.0
     
     for bin_range, hours in bins.items():
         pct = (hours / total_records) * 100 if total_records > 0 else 0
@@ -95,12 +96,6 @@ def calculate_temp_distribution(lat, lon, target_temp):
         
         inlet_114, outlet_114 = data_114kw.get(bin_range, ("-", "-"))
         inlet_95, outlet_95 = data_95kw.get(bin_range, ("-", "-"))
-
-        # Dynamically accumulate percentages based on the UI dropdown
-        if isinstance(inlet_114, (int, float)) and inlet_114 < target_temp:
-            pct_114_below_target += pct
-        if isinstance(inlet_95, (int, float)) and inlet_95 < target_temp:
-            pct_95_below_target += pct
 
         table_data.append({
             "Ambient Temp": bin_range, 
@@ -113,8 +108,7 @@ def calculate_temp_distribution(lat, lon, target_temp):
             "95kW Outlet (°C)": outlet_95
         })
 
-    return pd.DataFrame(table_data), pct_114_below_target, pct_95_below_target
-# Commit changes
+    return pd.DataFrame(table_data), pct_114_below_34, pct_95_below_34
 
 # Streamlit App UI
 st.set_page_config(page_title="Temperature APM", layout="wide")
