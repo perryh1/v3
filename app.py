@@ -66,7 +66,7 @@ def calculate_midland_temp_distribution():
         "> 45°C": (51.2, 62.7)
     }
 
-    # v1.7
+# v1.7
     table_data = []
     cumulative_pct = 0.0
     
