@@ -1,3 +1,28 @@
+# v1.10
+import streamlit as st
+import pandas as pd
+import requests
+
+US_STATES = [
+    "Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado", "Connecticut",
+    "Delaware", "Florida", "Georgia", "Hawaii", "Idaho", "Illinois", "Indiana", "Iowa",
+    "Kansas", "Kentucky", "Louisiana", "Maine", "Maryland", "Massachusetts", "Michigan",
+    "Minnesota", "Mississippi", "Missouri", "Montana", "Nebraska", "Nevada", "New Hampshire",
+    "New Jersey", "New Mexico", "New York", "North Carolina", "North Dakota", "Ohio",
+    "Oklahoma", "Oregon", "Pennsylvania", "Rhode Island", "South Carolina", "South Dakota",
+    "Tennessee", "Texas", "Utah", "Vermont", "Virginia", "Washington", "West Virginia",
+    "Wisconsin", "Wyoming"
+]
+
+def get_coordinates(city, state):
+    url = f"https://geocoding-api.open-meteo.com/v1/search?name={city}&count=10&language=en&format=json"
+    response = requests.get(url).json()
+    if "results" in response:
+        for result in response["results"]:
+            if result.get("country_code") == "US" and result.get("admin1") == state:
+                return result["latitude"], result["longitude"]
+    return None, None
+
 # v1.11 - Snippet 1
 # Replace your entire `calculate_temp_distribution` function with this updated version
 
@@ -89,4 +114,35 @@ def calculate_temp_distribution(lat, lon, target_temp):
         })
 
     return pd.DataFrame(table_data), pct_114_below_target, pct_95_below_target
+# Commit changes
+
+# Streamlit App UI
+st.set_page_config(page_title="Temperature APM", layout="wide")
+st.title("Temperature APM & Cooling Estimate")
+
+# Location Selection UI - Removed Country, adjusted columns
+col1, col2 = st.columns(2)
+with col1:
+    state = st.selectbox("State", US_STATES, index=US_STATES.index("Texas"))
+with col2:
+    city = st.text_input("City", "Midland")
+
+if st.button("Calculate APM"):
+    with st.spinner(f"Finding coordinates for {city}, {state}..."):
+        lat, lon = get_coordinates(city, state)
+        
+    if lat is None or lon is None:
+        st.error(f"Could not find coordinates for '{city}, {state}'. Please check the spelling.")
+    else:
+        with st.spinner(f"Fetching 5-year historical data for {city}..."):
+            df, pct_114, pct_95 = calculate_temp_distribution(lat, lon)
+            st.dataframe(df, hide_index=True, use_container_width=True)
+            
+            # Additional logic for the sub-34°C metrics
+            st.markdown("### Sub-34°C Inlet Oil Time Analysis")
+            col_a, col_b, col_c = st.columns(3)
+            col_a.metric("114kW Option (<34°C Inlet)", f"{pct_114:.2f}%")
+            col_b.metric("95kW Option (<34°C Inlet)", f"{pct_95:.2f}%")
+            col_c.metric("Delta", f"{(pct_95 - pct_114):.2f}%")
+
 # Commit changes
