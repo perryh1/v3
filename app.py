@@ -1,13 +1,31 @@
-# v1.6
+# v1.9
 import streamlit as st
 import pandas as pd
 import requests
 
+US_STATES = [
+    "Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado", "Connecticut",
+    "Delaware", "Florida", "Georgia", "Hawaii", "Idaho", "Illinois", "Indiana", "Iowa",
+    "Kansas", "Kentucky", "Louisiana", "Maine", "Maryland", "Massachusetts", "Michigan",
+    "Minnesota", "Mississippi", "Missouri", "Montana", "Nebraska", "Nevada", "New Hampshire",
+    "New Jersey", "New Mexico", "New York", "North Carolina", "North Dakota", "Ohio",
+    "Oklahoma", "Oregon", "Pennsylvania", "Rhode Island", "South Carolina", "South Dakota",
+    "Tennessee", "Texas", "Utah", "Vermont", "Virginia", "Washington", "West Virginia",
+    "Wisconsin", "Wyoming"
+]
+
+def get_coordinates(city, state):
+    url = f"https://geocoding-api.open-meteo.com/v1/search?name={city}&count=10&language=en&format=json"
+    response = requests.get(url).json()
+    if "results" in response:
+        for result in response["results"]:
+            # Match the country and state to ensure we don't get a city with the same name elsewhere
+            if result.get("country_code") == "US" and result.get("admin1") == state:
+                return result["latitude"], result["longitude"]
+    return None, None
+
 @st.cache_data
-def calculate_midland_temp_distribution():
-    # Midland, TX coordinates
-    lat, lon = 31.9973, -102.0779
-    
+def calculate_temp_distribution(lat, lon):
     # Fetching historical data
     url = f"https://archive-api.open-meteo.com/v1/archive?latitude={lat}&longitude={lon}&start_date=2019-01-01&end_date=2024-01-01&hourly=temperature_2m"
     response = requests.get(url)
@@ -47,7 +65,7 @@ def calculate_midland_temp_distribution():
         elif 42 <= temp <= 44: bins["42-44°C"] += 1
         elif temp > 45: bins["> 45°C"] += 1
 
-    # Hardcoded data from cooling estimate charts mapping upper bound of bins to Ambient ratings
+    # Hardcoded data from cooling estimate charts
     data_114kw = {
         "10-16°C": (28.4, 42.3), "16-18°C": (30.1, 44.0), "18-20°C": (31.8, 45.7),
         "20-22°C": (33.5, 47.4), "22-24°C": (35.2, 49.1), "24-26°C": (36.9, 50.8),
@@ -66,7 +84,6 @@ def calculate_midland_temp_distribution():
         "> 45°C": (51.2, 62.7)
     }
 
-# v1.7
     table_data = []
     cumulative_pct = 0.0
     
@@ -89,14 +106,30 @@ def calculate_midland_temp_distribution():
         })
 
     return pd.DataFrame(table_data)
-# Commit changes
-# v1.8
 
 # Streamlit App UI
-st.set_page_config(page_title="Midland Temp APM", layout="centered")
-st.title("Midland, TX Temperature APM")
+st.set_page_config(page_title="Temperature APM", layout="wide")
+st.title("Temperature APM & Cooling Estimate")
 
-with st.spinner("Fetching and calculating historical data..."):
-    df = calculate_midland_temp_distribution()
-    st.dataframe(df, hide_index=True)
+# Location Selection UI
+col1, col2, col3 = st.columns(3)
+with col1:
+    country = st.selectbox("Country", ["USA"])
+with col2:
+    state = st.selectbox("State", US_STATES, index=US_STATES.index("Texas"))
+with col3:
+    city = st.text_input("City", "Midland")
+
+# Trigger calculation on button press to avoid reloading on every keystroke
+if st.button("Calculate APM"):
+    with st.spinner(f"Finding coordinates for {city}, {state}..."):
+        lat, lon = get_coordinates(city, state)
+        
+    if lat is None or lon is None:
+        st.error(f"Could not find coordinates for '{city}, {state}'. Please check the spelling.")
+    else:
+        with st.spinner(f"Fetching 5-year historical data for {city}..."):
+            df = calculate_temp_distribution(lat, lon)
+            st.dataframe(df, hide_index=True, use_container_width=True)
+
 # Commit changes
