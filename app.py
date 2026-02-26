@@ -66,9 +66,13 @@ def calculate_midland_temp_distribution():
         "> 45°C": (51.2, 62.7)
     }
 
+    # v1.7
     table_data = []
+    cumulative_pct = 0.0
+    
     for bin_range, hours in bins.items():
-        pct = round((hours / total_records) * 100, 4) if total_records > 0 else 0
+        pct = (hours / total_records) * 100 if total_records > 0 else 0
+        cumulative_pct += pct
         
         inlet_114, outlet_114 = data_114kw.get(bin_range, ("-", "-"))
         inlet_95, outlet_95 = data_95kw.get(bin_range, ("-", "-"))
@@ -76,7 +80,8 @@ def calculate_midland_temp_distribution():
         table_data.append({
             "Ambient Temp": bin_range, 
             "Hours": hours, 
-            "% of Time": f"{pct}%",
+            "% of Time": f"{round(pct, 4)}%",
+            "Cumulative %": f"{round(cumulative_pct, 4)}%",
             "114kW Inlet (°C)": inlet_114,
             "114kW Outlet (°C)": outlet_114,
             "95kW Inlet (°C)": inlet_95,
@@ -84,13 +89,4 @@ def calculate_midland_temp_distribution():
         })
 
     return pd.DataFrame(table_data)
-
-# Streamlit App UI
-st.set_page_config(page_title="Midland Temp APM", layout="centered")
-st.title("Midland, TX Temperature APM")
-
-with st.spinner("Fetching and calculating historical data..."):
-    df = calculate_midland_temp_distribution()
-    st.dataframe(df, hide_index=True)
-
 # Commit changes
