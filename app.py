@@ -1,9 +1,8 @@
-# v1.2
+# v1.6
 import streamlit as st
 import pandas as pd
 import requests
 
-# v1.3
 @st.cache_data
 def calculate_midland_temp_distribution():
     # Midland, TX coordinates
@@ -48,32 +47,6 @@ def calculate_midland_temp_distribution():
         elif 42 <= temp <= 44: bins["42-44°C"] += 1
         elif temp > 45: bins["> 45°C"] += 1
 
-    # Calculate percentages and output as a formatted table for Streamlit
-    table_data = []
-    for bin_range, hours in bins.items():
-        pct = round((hours / total_records) * 100, 4) if total_records > 0 else 0
-        table_data.append({
-            "Temperature Range": bin_range, 
-            "Hours": hours, 
-            "Percentage": f"{pct}%"
-        })
-
-    return pd.DataFrame(table_data)
-
-# v1.4
-# Append this directly to the bottom of your app.py file
-
-# Streamlit App UI
-st.set_page_config(page_title="Midland Temp APM", layout="centered")
-st.title("Midland, TX Temperature APM")
-
-with st.spinner("Fetching and calculating historical data..."):
-    df = calculate_midland_temp_distribution()
-    st.table(df)
-
-# v1.5
-    # [Keep all previous imports, data fetching, and bin categorization logic exactly as before]
-
     # Hardcoded data from cooling estimate charts mapping upper bound of bins to Ambient ratings
     data_114kw = {
         "10-16°C": (28.4, 42.3), "16-18°C": (30.1, 44.0), "18-20°C": (31.8, 45.7),
@@ -93,7 +66,6 @@ with st.spinner("Fetching and calculating historical data..."):
         "> 45°C": (51.2, 62.7)
     }
 
-    # Calculate percentages and integrate cooling estimate data
     table_data = []
     for bin_range, hours in bins.items():
         pct = round((hours / total_records) * 100, 4) if total_records > 0 else 0
@@ -113,5 +85,12 @@ with st.spinner("Fetching and calculating historical data..."):
 
     return pd.DataFrame(table_data)
 
-# [Keep Streamlit UI rendering logic exactly as before]
+# Streamlit App UI
+st.set_page_config(page_title="Midland Temp APM", layout="centered")
+st.title("Midland, TX Temperature APM")
+
+with st.spinner("Fetching and calculating historical data..."):
+    df = calculate_midland_temp_distribution()
+    st.dataframe(df, hide_index=True)
+
 # Commit changes
