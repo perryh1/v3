@@ -71,4 +71,47 @@ with st.spinner("Fetching and calculating historical data..."):
     df = calculate_midland_temp_distribution()
     st.table(df)
 
+# v1.5
+    # [Keep all previous imports, data fetching, and bin categorization logic exactly as before]
+
+    # Hardcoded data from cooling estimate charts mapping upper bound of bins to Ambient ratings
+    data_114kw = {
+        "10-16°C": (28.4, 42.3), "16-18°C": (30.1, 44.0), "18-20°C": (31.8, 45.7),
+        "20-22°C": (33.5, 47.4), "22-24°C": (35.2, 49.1), "24-26°C": (36.9, 50.8),
+        "26-28°C": (38.6, 52.5), "28-30°C": (40.3, 54.2), "30-32°C": (42.0, 55.9),
+        "32-34°C": (43.7, 57.6), "34-36°C": (45.4, 59.3), "36-38°C": (47.1, 61.0),
+        "38-40°C": (48.8, 62.7), "40-42°C": (50.5, 64.4), "42-44°C": (52.2, 66.1),
+        "> 45°C": (53.0, 66.9)
+    }
+
+    data_95kw = {
+        "10-16°C": (26.5, 38.1), "16-18°C": (28.2, 39.8), "18-20°C": (29.9, 41.5),
+        "20-22°C": (31.6, 43.2), "22-24°C": (33.3, 44.9), "24-26°C": (35.0, 46.6),
+        "26-28°C": (36.7, 48.3), "28-30°C": (38.4, 50.0), "30-32°C": (40.1, 51.7),
+        "32-34°C": (41.8, 53.4), "34-36°C": (43.5, 55.1), "36-38°C": (45.2, 56.8),
+        "38-40°C": (46.9, 58.5), "40-42°C": (48.6, 60.2), "42-44°C": (50.3, 61.9),
+        "> 45°C": (51.2, 62.7)
+    }
+
+    # Calculate percentages and integrate cooling estimate data
+    table_data = []
+    for bin_range, hours in bins.items():
+        pct = round((hours / total_records) * 100, 4) if total_records > 0 else 0
+        
+        inlet_114, outlet_114 = data_114kw.get(bin_range, ("-", "-"))
+        inlet_95, outlet_95 = data_95kw.get(bin_range, ("-", "-"))
+
+        table_data.append({
+            "Ambient Temp": bin_range, 
+            "Hours": hours, 
+            "% of Time": f"{pct}%",
+            "114kW Inlet (°C)": inlet_114,
+            "114kW Outlet (°C)": outlet_114,
+            "95kW Inlet (°C)": inlet_95,
+            "95kW Outlet (°C)": outlet_95
+        })
+
+    return pd.DataFrame(table_data)
+
+# [Keep Streamlit UI rendering logic exactly as before]
 # Commit changes
