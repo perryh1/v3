@@ -111,7 +111,7 @@ with st.spinner("Fetching and calculating historical data..."):
             "95kW Outlet (°C)": outlet_95
         })
 
-    return pd.DataFrame(table_data)
+return pd.DataFrame(table_data)
 
 # [Keep Streamlit UI rendering logic exactly as before]
 # Commit changes
